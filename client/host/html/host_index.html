@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>PetalWindow(host)</title>
+    <!-- Material Design fonts -->
+    <!-- <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Roboto:300,400,500,700">
+    <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/icon?family=Material+Icons"> -->
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" type="text/css" href="/module/css/bootstrap.min.css">
+
+    <!-- Bootstrap Material Design -->
+    <link rel="stylesheet" type="text/css" href="/module/css/bootstrap-material-design.css">
+    <link rel="stylesheet" type="text/css" href="/module/css/ripples.min.css">
+
+    <link rel="stylesheet" type="text/css" href="/host/css/host_index.css">
+
+    <!-- to keep the abilities of using Node.js and Electron APIs -->
+    <script>
+      window.nodeRequire = require
+      delete window.require
+      delete window.exports
+      delete window.module
+    </script>
+
+    <!-- jQuery -->
+    <script src="../module/js/jquery.min.js"></script>
+    <script src="../module/js/socket.io.js"></script>
+    <script src="../module/js/peer.js"></script>
+
+  </head>
+  <body>
+    <div class="container">
+        <h1 id="host_id_h1">PetalWindow(host)</h1>
+    </div>
+    <div class="container" id="image_container">
+    </div>
+
+    <div class="container" id="stream_container">
+    </div>
+
+
+
+
+    <!--
+        import javascript
+    -->
+
+    <!-- Twitter Bootstrap -->
+    <script src="/module/js/bootstrap.min.js"></script>
+
+    <!-- Material Design for Bootstrap -->
+    <script src="/module/js/material.js"></script>
+    <script src="/module/js/ripples.min.js"></script>
+
+    <script src="/module/js/RDSetting.js"></script>
+    <script src="/module/js/RDManager.js"></script>
+    <script src="/host/js/host_index.js"></script>
+
+    <script>
+      $.material.init();
+    </script>
+  </body>
+</html>

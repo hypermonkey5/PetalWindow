@@ -1,0 +1,26 @@
+{
+  "name": "PetalWindow",
+  "version": "1.0.0",
+  "description": "A sharing window images system with web browser",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start ": "./node_modules/.bin/electron ."
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.17.1",
+    "bootstrap": "^3.3.7",
+    "bootstrap-material-design": "file:node_modules/bootstrap-material-design",
+    "cookie-parser": "^1.4.3",
+    "debug": "^2.6.3",
+    "electron": "^1.6.2",
+    "express": "^4.15.2",
+    "jquery": "^3.2.0",
+    "path": "^0.12.7",
+    "serve-favicon": "^2.4.1",
+    "socket.io": "^1.7.3",
+    "socket.io-client": "^1.7.3"
+  }
+}
