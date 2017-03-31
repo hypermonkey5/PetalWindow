@@ -17,6 +17,13 @@ function createWindow () {
   //   protocol: 'file:',
   //   slashes: true
   // }))
+
+  // win.loadURL(url.format({
+  //   pathname:("localhost:53000/host/index"),
+  //   protocol:"http:",
+  //   slashes: true
+  // }))
+  
   win.loadURL(url.format({
     pathname:("localhost:53000/host/index"),
     protocol:"http:",
@@ -49,6 +56,13 @@ app.on('window-all-closed', () => {
   }
 })
 
+// Avoid Error on SSL/TLS
+app.on('certificate-error', (event, webContents, url, error, cetificate, callback) => {
+
+  event.preventDefault()
+  callback(true)
+})
+
 app.on('activate', () => {
   // On macOS it's common to re-create a window in the app when the
   // dock icon is clicked and there are no other windows open.
@@ -70,6 +84,7 @@ function startApplication(){
 
 //express applications
 
+var fs = require('fs');
 var express = require('express')
 var favicon = require('serve-favicon')
 var logger = require('morgan')
@@ -77,6 +92,9 @@ var cookieParser = require('cookie-parser')
 var bodyParser = require('body-parser')
 var debug = require('debug')('winrd:server')
 var http = require('http')
+// var https = require('https')
+// var key = './client/host/pem/server_key.pem'
+// var cert = './client/host/pem/server_crt.pem'
 var port = 53000;
 
 var exapp = express()
@@ -100,7 +118,13 @@ router.get('/remote/index', (req,res,next)=>{
 exapp.use('/', router)
 exapp.set('port',port)
 
+// var options = {
+//   key: fs.readFileSync(key),
+//   cert: fs.readFileSync(cert)
+// }
+
 var server = http.createServer(exapp)
+// var server = https.createServer(options,exapp)
 var io = require('socket.io')(server)
 
 server.listen(port)
