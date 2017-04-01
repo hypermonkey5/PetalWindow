@@ -130,6 +130,10 @@ class RDManager{
 
   }
 
+  onConnectorGetMessage(data){
+
+  }
+
   setRDConnector(apikey, url){
 
   }
@@ -191,6 +195,10 @@ class RDHostManager extends RDManager{
 					});
   }
 
+  addWindowRoom(){
+    this.connector.sendAddWindowRoomRequest(this.windowList[0].imageURL);
+  }
+
   /*
     override method host
   */
@@ -246,10 +254,6 @@ class RDHostManager extends RDManager{
 
   }
 
-  addWindowRoom(){
-    this.connector.sendAddWindowRoomRequest(this.windowList[0].imageURL);
-  }
-
 }
 
 class RDRemoteManager extends RDManager{
@@ -257,12 +261,70 @@ class RDRemoteManager extends RDManager{
     super()
   }
 
-  displayWindowRoomList(windowRoomList){
-    
+  appendWindowRoomImageElement(winId, winName,winImageUrl){
+
+    const frame_div = document.createElement("div")
+    const panel_div = document.createElement("div")
+    const panel_head_div = document.createElement("div")
+    const panel_body_div = document.createElement("div")
+    const thumbnail_img = document.createElement("img")
+    const name_h3 = document.createElement("h4")
+
+    frame_div.className = "col-sm-3"
+    panel_div.className = "panel panel-default"
+    panel_head_div.className = "panel-head"
+    panel_body_div.className = "panel-body"
+
+    frame_div.id = winId
+
+    panel_head_div.appendChild(name_h3)
+    panel_body_div.appendChild(thumbnail_img)
+    panel_div.appendChild(panel_head_div)
+    panel_div.appendChild(panel_body_div)
+    frame_div.appendChild(panel_div)
+
+    thumbnail_img.onload = ()=>{
+      //document.body.appendChild(thumbnail_img)
+      //console.log(winName)
+      name_h3.innerHTML = winName
+      thumbnail_img.style.width = "100%"
+      thumbnail_img.style.height = "100%"
+      if((this.elementCount % 4) == 0){
+        this.rowCount = this.rowCount + 1
+        this.appendWindowImageElementRow()
+      }
+      this.elementCount = this.elementCount+1
+      document.getElementById("row"+String(this.rowCount)).appendChild(frame_div)
+      // this.setClickEventListener(frame_div)
+    }
+    thumbnail_img.src = winImageUrl
+
   }
 
-  getWindowRooms(){
-    this.connector.sendRequestWindowRooms()
+
+  appendWindowRoomImageElementRow(){
+    const row_div = document.createElement("div")
+    row_div.className = "row"
+    row_div.id = "row"+String(this.rowCount)
+    document.getElementById("room_container").appendChild(row_div)
+  }
+
+  displayWindowRoomList(windowRoomList){
+    const self = this
+    this.clearDisplayWindowRoomList()
+    windowRoomList.forEach((elm,ind,arr)=>{
+      self.appendWindowImageElement(elm.windowId, elm.windowName, elm.imageURL)
+    })
+  }
+
+  clearDisplayWindowRoomList(){
+    document.getElementById("room_container").innerHTML = ""
+    this.elementCount = 0
+    this.rowCount = 0
+  }
+
+  getWindowRoomList(){
+    this.connector.sendRequestWindowRoomList()
   }
 
   /*
@@ -284,6 +346,18 @@ class RDRemoteManager extends RDManager{
     this.appendWindowStreamElement(mediaStream)
   }
 
+  onConnectorGetMessage(message){
+    const self = this
+    switch(message.act){
+      case "responseWindowRoomList" :
+        self.windowRoomList = new Map(JSON.parse(message.windowRoomList))
+        self.displayWindowRoomList(self.windowRoomList)
+      break;
+      default:
+      break;
+    }
+  }
+
   setRDConnector(apikey, url){
     const self = this
     if(!this.connector){
@@ -295,7 +369,10 @@ class RDRemoteManager extends RDManager{
         self.onConnectorGetStream(mediaStream)
       })
       this.connector.setOnConnectedEvent(()=>{
-        this.getWindowRooms()
+        self.getWindowRoomList()
+      })
+      this.connector.setOnGetMessageEvent((message)=>{
+        self.onConnectorGetMessage(message)
       })
     }
   }
@@ -338,6 +415,8 @@ class RDConnector{
 
     this.onGetStream = ()=>{}
     this.onGetData = ()=>{}
+    this.onConnected = ()=>{}
+    this.onGetMessage = ()=>{}
 
     this.dataConnectionMap = new Map()
     this.streamConnectionMap = new Map()
@@ -353,6 +432,9 @@ class RDConnector{
     this.socket.on("connect",()=>{
       console.log("socket connected")
       self.onConnected();
+    })
+    this.socket.on("message",(message)=>{
+      self.onGetMessage(message)
     })
     this.onInitSocket()
   }
@@ -455,6 +537,12 @@ class RDConnector{
     }
   }
 
+  setOnGetMessageEvent(callback){
+    this.onGetMessage = (message)=>{
+      callback(message)
+    }
+  }
+
 
   /*
     require override
@@ -471,6 +559,10 @@ class RDConnector{
 
   }
 
+  onGetMessage(){
+
+  }
+
   onDataConnectionOpened(dataConnection){
 
   }
@@ -482,6 +574,11 @@ class RDHostConnector extends RDConnector{
   // TODO broadcast message method
   constructor(apikey, url){
     super(apikey, url)
+  }
+
+  sendAddWindowRoomRequest(imageURL){
+    const self = this
+    this.socket.emit("addWindowRoom",{imageURL})
   }
 
   /*
@@ -506,11 +603,6 @@ class RDHostConnector extends RDConnector{
     })
   }
 
-  sendAddWindowRoomRequest(imageURL){
-    const self = this
-    this.socket.emit("addWindowRoom",{imageURL})
-  }
-
 }
 
 
@@ -530,10 +622,6 @@ class RDRemoteConnector extends RDConnector{
       self.hostId = data.peerId
       const conn = self.peer.connect(data.peerId)
       self.registDataConnection(conn) // イベントが二重発火してたら消す
-    })
-    this.socket.on("responseWindowRooms",(data)=>{
-      self.windowRooms = new Map(JSON.parse(data.windowRooms))
-      console.log(self.windowRooms)
     })
     this.socket.emit("requestPeer",{})
   }
@@ -558,8 +646,8 @@ class RDRemoteConnector extends RDConnector{
     })
   }
 
-  sendRequestWindowRooms(){
-    this.socket.emit("requestWindowRooms",{})
+  sendRequestWindowRoomList(){
+    this.socket.emit("requestWindowRoomList",{})
   }
 
 }

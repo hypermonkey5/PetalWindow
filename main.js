@@ -1,2 +1,2 @@
-var host = require("./client/host/js/main.js")
-var server = require("./server.js")
+require("./client/host/js/main.js")
+require("./server.js")

@@ -58,7 +58,7 @@ function onListening(){
   // startApplication()
 }
 
-var windowRooms = new Map()
+var windowRoomList = new Map()
 
 io.on('connection',(socket)=>{
   console.log("socket connected")
@@ -69,9 +69,9 @@ io.on('connection',(socket)=>{
     socket.to(message.socketId).emit("responsePeer",message)
   })
   socket.on("addWindowRoom",(message)=>{
-    windowRooms.set(socket.id,{thumbnailImageURL: message.imageURL})
+    windowRoomList.set(socket.id,{thumbnailImageURL: message.imageURL})
   })
-  socket.on("requestWindowRooms",(message)=>{
-    socket.emit("responseWindowRooms",{windowRooms:JSON.stringify(Array.from(windowRooms))})
+  socket.on("requestWindowRoomList",(message)=>{
+    socket.emit("message",{act: "responseWindowRoomList",windowRoomList:JSON.stringify(Array.from(windowRoomList))})
   })
 })
