@@ -1,2 +1,2 @@
 require("./client/host/js/main.js")
-require("./server.js")
+require("./server/js/server.js")

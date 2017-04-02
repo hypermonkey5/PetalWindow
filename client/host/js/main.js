@@ -26,7 +26,7 @@ function createWindow () {
   
   win.loadURL(url.format({
     pathname:("localhost:53000/host/index"),
-    protocol:"http:",
+    protocol:"https:",
     slashes: true
   }))
 

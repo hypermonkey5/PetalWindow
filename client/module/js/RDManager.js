@@ -103,6 +103,7 @@ class RDManager{
       container_row_div.appendChild(container_col_div)
 
       document.getElementById("stream_container").appendChild(container_row_div)
+      window_video.play()
   }
 
   displayWindowList(windowList){

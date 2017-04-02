@@ -16,15 +16,14 @@ var debug = require('debug')('winrd:server')
 // var http = require('http')
 
 var https = require('https')
-var key = './client/host/pem/server_key.pem'
-var cert = './client/host/pem/server_crt.pem'
+var key = './server/pem/server.key'
+var cert = './server/pem/server.crt'
 
 var port = 53000;
 
 var exapp = express()
 var router = express.Router()
-
-exapp.use(express.static(path.join(__dirname, 'client')))
+exapp.use(express.static(path.join(__dirname, '../..', 'client')))
 exapp.use(logger('dev'))
 exapp.use(bodyParser.json())
 exapp.use(bodyParser.urlencoded({extended:false}))
