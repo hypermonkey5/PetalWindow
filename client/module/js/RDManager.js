@@ -103,6 +103,7 @@ class RDManager{
       container_row_div.appendChild(container_col_div)
 
       document.getElementById("stream_container").appendChild(container_row_div)
+      window_video.play()
   }
 
   displayWindowList(windowList){
@@ -127,6 +128,10 @@ class RDManager{
   }
 
   onConnectorGetStream(mediaStream){
+
+  }
+
+  onConnectorGetMessage(data){
 
   }
 
@@ -251,6 +256,67 @@ class RDRemoteManager extends RDManager{
     super()
   }
 
+  appendWindowRoomImageElement(winId, winName,winImageUrl){
+
+    const frame_div = document.createElement("div")
+    const panel_div = document.createElement("div")
+    const panel_head_div = document.createElement("div")
+    const panel_body_div = document.createElement("div")
+    const thumbnail_img = document.createElement("img")
+    const name_h3 = document.createElement("h4")
+
+    frame_div.className = "col-sm-3"
+    panel_div.className = "panel panel-default"
+    panel_head_div.className = "panel-head"
+    panel_body_div.className = "panel-body"
+
+    frame_div.id = winId
+
+    panel_head_div.appendChild(name_h3)
+    panel_body_div.appendChild(thumbnail_img)
+    panel_div.appendChild(panel_head_div)
+    panel_div.appendChild(panel_body_div)
+    frame_div.appendChild(panel_div)
+
+    thumbnail_img.onload = ()=>{
+      //document.body.appendChild(thumbnail_img)
+      //console.log(winName)
+      name_h3.innerHTML = winName
+      thumbnail_img.style.width = "100%"
+      thumbnail_img.style.height = "100%"
+      if((this.elementCount % 4) == 0){
+        this.rowCount = this.rowCount + 1
+        this.appendWindowImageElementRow()
+      }
+      this.elementCount = this.elementCount+1
+      document.getElementById("row"+String(this.rowCount)).appendChild(frame_div)
+      // this.setClickEventListener(frame_div)
+    }
+    thumbnail_img.src = winImageUrl
+
+  }
+
+
+  appendWindowRoomImageElementRow(){
+    const row_div = document.createElement("div")
+    row_div.className = "row"
+    row_div.id = "row"+String(this.rowCount)
+    document.getElementById("room_container").appendChild(row_div)
+  }
+
+  displayWindowRoomList(windowRoomList){
+    const self = this
+    this.clearDisplayWindowRoomList()
+    windowRoomList.forEach((elm,ind,arr)=>{
+      self.appendWindowImageElement(elm.windowId, elm.windowName, elm.imageURL)
+    })
+  }
+
+  clearDisplayWindowRoomList(){
+    document.getElementById("room_container").innerHTML = ""
+    this.elementCount = 0
+    this.rowCount = 0
+  }
 
   /*
     override method remote
@@ -322,6 +388,8 @@ class RDConnector{
 
     this.onGetStream = ()=>{}
     this.onGetData = ()=>{}
+    this.onConnected = ()=>{}
+    this.onGetMessage = ()=>{}
 
     this.dataConnectionMap = new Map()
     this.streamConnectionMap = new Map()
@@ -478,6 +546,7 @@ class RDHostConnector extends RDConnector{
       this.registStreamConnection(streamConnection)
     })
   }
+
 }
 
 
