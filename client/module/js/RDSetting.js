@@ -1,3 +1,3 @@
 // connection
-const SOCKET_URL = "http://localhost:53000"
-const SKYWAY_API_KEY = "830fb6cf-917c-480e-b5c5-df08f9d2d3ed"
+const SOCKET_URL = "http://192.168.11.5:53000"
+const SKYWAY_API_KEY = "2f3f6620-6812-438a-82da-965647fd96db"
