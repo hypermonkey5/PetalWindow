@@ -12,10 +12,13 @@ var logger = require('morgan')
 var cookieParser = require('cookie-parser')
 var bodyParser = require('body-parser')
 var debug = require('debug')('winrd:server')
-var http = require('http')
-// var https = require('https')
-// var key = './client/host/pem/server_key.pem'
-// var cert = './client/host/pem/server_crt.pem'
+
+// var http = require('http')
+
+var https = require('https')
+var key = './client/host/pem/server_key.pem'
+var cert = './client/host/pem/server_crt.pem'
+
 var port = 53000;
 
 var exapp = express()
@@ -39,13 +42,15 @@ router.get('/remote/index', (req,res,next)=>{
 exapp.use('/', router)
 exapp.set('port',port)
 
-// var options = {
-//   key: fs.readFileSync(key),
-//   cert: fs.readFileSync(cert)
-// }
+var options = {
+  key: fs.readFileSync(key),
+  cert: fs.readFileSync(cert)
+}
 
-var server = http.createServer(exapp)
-// var server = https.createServer(options,exapp)
+// var server = http.createServer(exapp)
+
+var server = https.createServer(options,exapp)
+
 var io = require('socket.io')(server)
 
 server.listen(port)
@@ -55,7 +60,6 @@ function onListening(){
   const addr = server.address()
   const bind = typeof addr === 'string' ? 'pipe ' + addr : 'port ' + addr.port
   debug('Listening on ' + bind)
-  // startApplication()
 }
 
 var windowRoomList = new Map()
@@ -67,11 +71,5 @@ io.on('connection',(socket)=>{
   })
   socket.on("responsePeer",(message)=>{
     socket.to(message.socketId).emit("responsePeer",message)
-  })
-  socket.on("addWindowRoom",(message)=>{
-    windowRoomList.set(socket.id,{thumbnailImageURL: message.imageURL})
-  })
-  socket.on("requestWindowRoomList",(message)=>{
-    socket.emit("message",{act: "responseWindowRoomList",windowRoomList:JSON.stringify(Array.from(windowRoomList))})
   })
 })

@@ -150,6 +150,7 @@ class RDHostManager extends RDManager{
       this.screenWidth = screen.getPrimaryDisplay().size.width
       this.screenHeight = screen.getPrimaryDisplay().size.height
       this.desktopCapturer = desktopCapturer
+      this.getWindowList()
   }
 
   getWindowList(callback=function(){}){
@@ -195,10 +196,6 @@ class RDHostManager extends RDManager{
 					});
   }
 
-  addWindowRoom(){
-    this.connector.sendAddWindowRoomRequest(this.windowList[0].imageURL);
-  }
-
   /*
     override method host
   */
@@ -242,9 +239,6 @@ class RDHostManager extends RDManager{
       })
       this.connector.setOnGetStreamEvent((mediaStream)=>{
         self.onConnectorGetStream(mediaStream)
-      })
-      this.connector.setOnConnectedEvent(()=>{
-        this.addWindowRoom()
       })
     }
   }
@@ -323,10 +317,6 @@ class RDRemoteManager extends RDManager{
     this.rowCount = 0
   }
 
-  getWindowRoomList(){
-    this.connector.sendRequestWindowRoomList()
-  }
-
   /*
     override method remote
   */
@@ -346,18 +336,6 @@ class RDRemoteManager extends RDManager{
     this.appendWindowStreamElement(mediaStream)
   }
 
-  onConnectorGetMessage(message){
-    const self = this
-    switch(message.act){
-      case "responseWindowRoomList" :
-        self.windowRoomList = new Map(JSON.parse(message.windowRoomList))
-        self.displayWindowRoomList(self.windowRoomList)
-      break;
-      default:
-      break;
-    }
-  }
-
   setRDConnector(apikey, url){
     const self = this
     if(!this.connector){
@@ -367,12 +345,6 @@ class RDRemoteManager extends RDManager{
       })
       this.connector.setOnGetStreamEvent((mediaStream)=>{
         self.onConnectorGetStream(mediaStream)
-      })
-      this.connector.setOnConnectedEvent(()=>{
-        self.getWindowRoomList()
-      })
-      this.connector.setOnGetMessageEvent((message)=>{
-        self.onConnectorGetMessage(message)
       })
     }
   }
@@ -431,10 +403,6 @@ class RDConnector{
     this.socket = io(this.SOCKET_URL)
     this.socket.on("connect",()=>{
       console.log("socket connected")
-      self.onConnected();
-    })
-    this.socket.on("message",(message)=>{
-      self.onGetMessage(message)
     })
     this.onInitSocket()
   }
@@ -531,18 +499,6 @@ class RDConnector{
     }
   }
 
-  setOnConnectedEvent(callback){
-    this.onConnected = ()=>{
-      callback()
-    }
-  }
-
-  setOnGetMessageEvent(callback){
-    this.onGetMessage = (message)=>{
-      callback(message)
-    }
-  }
-
 
   /*
     require override
@@ -552,14 +508,6 @@ class RDConnector{
   }
 
   onInitPeer(){
-
-  }
-
-  onConnected(){
-
-  }
-
-  onGetMessage(){
 
   }
 
@@ -574,11 +522,6 @@ class RDHostConnector extends RDConnector{
   // TODO broadcast message method
   constructor(apikey, url){
     super(apikey, url)
-  }
-
-  sendAddWindowRoomRequest(imageURL){
-    const self = this
-    this.socket.emit("addWindowRoom",{imageURL})
   }
 
   /*
@@ -644,10 +587,6 @@ class RDRemoteConnector extends RDConnector{
       act : "requestWindowList",
       peerId : self.peerId
     })
-  }
-
-  sendRequestWindowRoomList(){
-    this.socket.emit("requestWindowRoomList",{})
   }
 
 }
