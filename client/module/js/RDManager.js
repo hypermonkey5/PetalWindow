@@ -331,7 +331,9 @@ class RDRemoteManager extends RDManager{
 
     const url = URL.createObjectURL(mediaStream)
     window_video.src = url
-    window_video.play()
+    window_video.oncanplay = ()=>{
+      window_video.play()
+    }
   }
 
   addSharedEventListener(window_video){
@@ -380,8 +382,8 @@ class RDRemoteManager extends RDManager{
       self.connector.sendMessage(self.connector.hostId, {
         act : "requestWindowStream",
         windowId : dom_elm.id,
-        width : window.innerWidth,
-        height : window.innerHeight
+        width : screen.width,
+        height : screen.height
       })
       self.displayedWindowId = dom_elm.id
     })
