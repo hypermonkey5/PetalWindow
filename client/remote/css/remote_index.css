@@ -20,12 +20,10 @@ html, body{
 }
 .mdl-components .mdl-components__pages {
     display: inline-block;
-    height: calc(100% - 160px);
+    height: 100%;
     -webkit-flex-grow: 1;
     -ms-flex-positive: 1;
     flex-grow: 1;
-    padding-top: 80px;
-    padding-bottom: 80px;
 }
 .mdl-components {
     display: -webkit-flex;

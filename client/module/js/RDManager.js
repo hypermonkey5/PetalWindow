@@ -122,7 +122,7 @@ class RDHostManager extends RDManager{
 
   getWindowList(callback=function(){}){
     const self = this
-    this.desktopCapturer.getSources({types:['window','screen'],thumbnailSize:{width:300,height:300}},(error,sources)=>{
+    this.desktopCapturer.getSources({types:['window','screen'],thumbnailSize:{width:400,height:300}},(error,sources)=>{
 			if(error){
 				console.error(error)
 			}
@@ -324,7 +324,7 @@ class RDRemoteManager extends RDManager{
 
     window_video.style.width = "100%"
     window_video.style.height = "100%"
-    window_video.style.objectFit = "cover"
+    window_video.style.objectFit = "contain"
 
     this.addSharedEventListener(window_video)
     document.getElementById("shared_window").appendChild(window_video)
@@ -341,6 +341,18 @@ class RDRemoteManager extends RDManager{
      const altKey = e.altKey
      const ctrlKey = e.ctrlKey
      const shiftKey = e.shiftKey
+     const clientX = e.clientX
+     const clientY = e.clientY
+     const rect = window_video.getBoundingClientRect()
+     const dx = (clientX-rect.left)-rect.width/2
+     const dy = (clientY-rect.top)-rect.height/2
+     var radius = Math.sqrt(dx*dx+dy*dy)
+     if(radius == Infinity || Number.isNaN(radius)){
+      radius = 1
+     }
+     const cos = dx/radius
+     const radian = Math.acos(cos)
+     console.log(radius,radian)
     })
   }
 
