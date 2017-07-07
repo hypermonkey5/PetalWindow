@@ -51,7 +51,7 @@ class RDManager{
       // console.log(winName)
       thumbnail_img.style.width = "100%"
       thumbnail_img.style.height = "100%"
-      if((this.elementCount % 4) == 0){
+      if((this.elementCount % 5) == 0){
         this.rowCount = this.rowCount + 1
         this.appendWindowImageElementRow()
       }
@@ -161,10 +161,13 @@ class RDHostManager extends RDManager{
 					});
   }
 
-  sendRequestCreateEventToMainProcess(event){
-  	this.ipcRenderer.send("createEvent",event)
+  sendRequestCreateMouseEventToMainProcess(body){
+  	this.ipcRenderer.send("createMouseEvent",body)
   }
 
+  sendRequestCreateKeyEventToMainProcess(body){
+    this.ipcRenderer.send("createKeyEvent",body)
+  }
   /*
     override method host
   */
@@ -190,7 +193,10 @@ class RDHostManager extends RDManager{
         })
       break;
       case "createMouseEvent" :
-        self.sendRequestCreateEventToMainProcess(data)
+        self.sendRequestCreateMouseEventToMainProcess(data.body)
+      break;
+      case "createKeyEvent" :
+        self.sendRequestCreateKeyEventToMainProcess(data.body)
       break;
       default :
       break;
@@ -317,14 +323,34 @@ class RDRemoteManager extends RDManager{
   constructor(){
     super()
     this.displayedWindowId = null
+    this.lastDownTarget = null
+    window.onload = ()=>{
+      this.setDocumentEvent()
+    }
+  }
+
+  setDocumentEvent(){
+    document.addEventListener("mousedown",(e)=>{
+      this.lastDownTarget = e.target
+    })
+    document.addEventListener("keydown",(e)=>{
+      const virtual_window = document.getElementById("virtual_window")
+      if(!virtual_window){
+        return
+      }
+      if(virtual_window==this.lastDownTarget){
+        this.sendCreateKeyEventRequest(e)
+      }
+    })
   }
 
   appendWindowStreamElement(mediaStream){
     const window_video = document.createElement("video")
 
-    window_video.style.width = "100%"
-    window_video.style.height = "100%"
+    window_video.style.maxWidth = "100%"
+    window_video.style.maxHeight = "80%"
     window_video.style.objectFit = "contain"
+    window_video.id = "virtual_window"
 
     this.addSharedEventListener(window_video)
     document.getElementById("shared_window").appendChild(window_video)
@@ -337,23 +363,81 @@ class RDRemoteManager extends RDManager{
   }
 
   addSharedEventListener(window_video){
-  	window_video.addEventListener("click",(e)=>{
-     const altKey = e.altKey
-     const ctrlKey = e.ctrlKey
-     const shiftKey = e.shiftKey
-     const clientX = e.clientX
-     const clientY = e.clientY
-     const rect = window_video.getBoundingClientRect()
-     const dx = (clientX-rect.left)-rect.width/2
-     const dy = (clientY-rect.top)-rect.height/2
-     var radius = Math.sqrt(dx*dx+dy*dy)
-     if(radius == Infinity || Number.isNaN(radius)){
-      radius = 1
-     }
-     const cos = dx/radius
-     const radian = Math.acos(cos)
-     console.log(radius,radian)
+    var init = false
+    const onMouseMoveEventOnVideo = (e)=>{
+      if(init){
+        this.sendCreateMouseEventRequest(window_video,e)
+      }
+      init = true
+    }
+  	window_video.addEventListener("mousedown",(e)=>{
+      this.sendCreateMouseEventRequest(window_video,e)
+      window_video.addEventListener("mousemove",onMouseMoveEventOnVideo)
     })
+    window_video.addEventListener("mouseup",(e)=>{
+      this.sendCreateMouseEventRequest(window_video,e)
+      window_video.removeEventListener("mousemove",onMouseMoveEventOnVideo)
+      init = false
+    })
+    window_video.addEventListener("waiting",(e)=>{
+    })
+    window_video.addEventListener("wheel",(e)=>{
+      this.sendCreateMouseEventRequest(window_video,e)
+    })
+  }
+
+  sendCreateKeyEventRequest(e){
+    console.log(e)
+    const keyCode = e.keyCode
+    const key = e.key
+    const onAlt = e.altKey
+    const onCtrl = e.ctrlKey
+    const onShift = e.shiftKey
+    const onCmd = e.metaKey
+    const isARepeat = e.repeat
+    const event = {
+      keyCode,onAlt,onCtrl,onShift,onCmd,isARepeat,key
+    }
+
+    this.connector.sendMessage(this.connector.hostId, {
+      act: "createKeyEvent",
+      body: {
+        windowId: this.displayedWindowId,
+        event: event
+      }
+    })
+  }
+
+  sendCreateMouseEventRequest(window_video,e){
+   const rect = window_video.getBoundingClientRect()
+   const clientX = e.clientX-rect.left
+   const clientY = e.clientY-rect.top
+   const dx = clientX-rect.width/2
+   const dy = clientY-rect.height/2
+   var radius = Math.sqrt(dx*dx+dy*dy)
+   if(radius == Infinity || Number.isNaN(radius)){
+    radius = 1
+   }
+   const cos = dx/radius
+   var radian = Math.acos(cos)
+   if(dy > 0){
+    radian*=-1
+   }
+   const event = {
+    type: e.type,
+    radius,radian,
+    deltaX: e.deltaX,
+    deltaY: e.deltaY
+   }
+
+   this.connector.sendMessage(this.connector.hostId, {
+    act: "createMouseEvent",
+    body: {
+      windowId: this.displayedWindowId,
+      event: event,
+      domSize: {width:rect.width,height:rect.height}
+    }
+   })
   }
 
   /*

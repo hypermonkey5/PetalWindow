@@ -1,4 +1,5 @@
-const {app, BrowserWindow, ipcMain, desktopCapturer} = require('electron')
+const electron = require('electron')
+const {app, BrowserWindow, ipcMain, desktopCapturer} = electron
 const path = require('path')
 const url = require('url')
 const $ = require('NodObjC')
@@ -27,6 +28,7 @@ function createWindow () {
   //   slashes: true
   // }))
   
+  // get html
   win.loadURL(url.format({
     pathname:("localhost:53000/host/index"),
     protocol:"https:",
@@ -74,87 +76,177 @@ app.on('activate', () => {
   }
 })
 
+
 const NSEventType = {
   mousedown: $.NSLeftMouseDown,
   mouseup: $.NSLeftMouseUp,
-  mousedragged: $.NSLeftMouseDragged
+  mousemove: $.NSLeftMouseDragged,
+  wheel: $.NSScrollWheel
 }
 
 var dragged = false
 
-ipcMain.on('createEvent',(self,data)=>{
-  createLeftMouseEvent(data.type,{x:data.x,y:data.y},{width:data.width,height:data.height},data.windowId)
+ipcMain.on('createMouseEvent',(self,body)=>{
+  createLeftMouseEvent(body.event,body.domSize,body.windowId)
 })
 
-function createLeftMouseEvent(eventtype,coordinate,size,windowId){
-  var fileManager = $.NSFileManager('defaultManager')
-  var windowList = $.CGWindowListCopyWindowInfo($.kCGWindowListOptionOnScreenOnly,$.kCGNullWindowID)
-  windowList = $.CFBridgingRelease(windowList);
+ipcMain.on('createKeyEvent',(self,body)=>{
+  createKeyEvent(body.event,body.windowId)
+})
+
+function createKeyEvent(event,windowId){
+  const windowListInfo = $.CGWindowListCopyWindowInfo($.kCGWindowListOptionOnScreenOnly,$.kCGNullWindowID)
+  const windowList = $.CFBridgingRelease(windowListInfo)
 
   var processId = null
-  var width = null
-  var height = null
+  var windowNumber = null
   for(var i=0;i<windowList('count');i++){
-    var appWindow = windowList('objectAtIndex', i)
-    if("window:"+appWindow('objectForKey', $.kCGWindowNumber) == windowId){
+    var appWindow = windowList('objectAtIndex',i)
+    if('window:'+appWindow('objectForKey',$.kCGWindowNumber)==windowId){
       processId = appWindow('objectForKey', $.kCGWindowOwnerPID)
-      windowId = appWindow('objectForKey', $.kCGWindowNumber)
-      const bounds = appWindow('objectForKey', $.kCGWindowBounds)
-      width = bounds('objectForKey', $('Width'))
-      height = bounds('objectForKey', $('Height'))
+      windowNumber = appWindow('objectForKey',$.kCGWindowNumber)
+      break
     }
   }
 
-  if(!(processId && width && height)){
+  if(!processId){
     return
   }
 
-  const hostAspect = width/height
-  const remoteAspect = size.width/size.height
-  var dx = coordinate.x
-  var dy = coordinate.y
-
-  if(hostAspect >= remoteAspect){ // 縦にはみ出る
-    dx *= width/size.width
-    dy -= (size.height/2-size.width/hostAspect/2)
-    dy *= height/size.height
-    dy = height-dy
-  } else { // 横にはみ出る
-    dx -= (size.width/2-size.height*hostAspect/2)
-    dx *= width/size.width
-    dy *= height/size.height
-    dy = height-dy
-  }
-
-  switch(eventtype){
-    case 'mousedown' :
-    dragged = true
-    break
-    case 'mouseup' :
-    dragged = false
-    break
-    default :
-    if(!dragged){
-      return
-    } else {
+  const type = event.type == 'keydown' ? $.NSKeyDown : $.NSKeyUp
+  if(event.key.length>1){
+    var characters = null
+    switch(event.key){
+      case 'Enter':
+      characters = $('\n')
+      break
+      case 'Backspace':
+      characters = $('\b')
+      break
+      case 'Tab':
+      characters = $('\t')
+      break
+      default:
+      console.log(event.key)
       return
     }
-    break
+    const nsEvent1 = $.NSEvent(
+     'keyEventWithType', $.NSKeyDown,
+     'location', $.NSMakePoint(0,0),
+     'modifierFlags', 0,
+     'timestamp', $.NSProcessInfo('processInfo')('systemUptime'),
+     'windowNumber', $.NSNumber('numberWithInt',windowNumber)('unsignedLongLongValue'),
+     'context', $.NSGraphicsContext('currentContext'),
+     'characters', characters,
+     'charactersIgnoringModifiers', null,
+     'isARepeat', false,
+     'keyCode', null
+     )
+    const cgEvent1 = nsEvent1('CGEvent');
+    $.CGEventPostToPid(processId,cgEvent1);
+    // $.CFRelease(cgEvent1);
+    return
+  }
+  const nsEvent = $.NSEvent(
+   'keyEventWithType', $.NSKeyDown,
+   'location', $.NSMakePoint(0,0),
+   'modifierFlags', 0,
+   'timestamp', $.NSProcessInfo('processInfo')('systemUptime'),
+   'windowNumber', $.NSNumber('numberWithInt',windowNumber)('unsignedLongLongValue'),
+   'context', $.NSGraphicsContext('currentContext'),
+   'characters', $(event.key),
+   'charactersIgnoringModifiers', $(''),
+   'isARepeat', false,
+   'keyCode', null
+   )
+  const cgEvent = nsEvent('CGEvent');
+  $.CGEventPostToPid(processId,cgEvent);
+  // $.CFRelease(cgEvent);
+}
+
+function createLeftMouseEvent(event,domSize,windowId){
+  const {width,height} = electron.screen.getPrimaryDisplay().workAreaSize
+
+  const windowListInfo = $.CGWindowListCopyWindowInfo($.kCGWindowListOptionOnScreenOnly,$.kCGNullWindowID)
+  const windowList = $.CFBridgingRelease(windowListInfo)
+
+  var processId = null
+  var windowWidth = null
+  var windowHeight = null
+  var windowNumber = null
+  var bottom = 0
+  var left = 0
+  for(var i=0;i<windowList('count');i++){
+    var appWindow = windowList('objectAtIndex',i)
+    if('window:'+appWindow('objectForKey',$.kCGWindowNumber)==windowId){
+      processId = appWindow('objectForKey', $.kCGWindowOwnerPID)
+      const bounds = appWindow('objectForKey', $.kCGWindowBounds)
+      windowWidth = parseInt(bounds('objectForKey',$('Width')))
+      windowHeight = parseInt(bounds('objectForKey',$('Height')))
+      bottom = (height+22)-(parseInt(bounds('objectForKey',$('Y')))+windowHeight)
+      bottom = bottom < 0 ? 0 : bottom
+      left = parseInt(bounds('objectForKey',$('X')))
+      left = left < 0 ? 0 : left
+      windowNumber = appWindow('objectForKey',$.kCGWindowNumber)
+      break
+    }
   }
 
-  var event = $.NSEvent(
-      'mouseEventWithType', NSEventType[eventtype],
-      'location', $.NSMakePoint(dx,dy),
+  if(!processId){
+    return
+  }
+
+  // get aspect rate
+  const screenV = height/width
+  const windowV = windowHeight/windowWidth
+
+  const rate = screenV > windowV ? windowWidth/domSize.width : windowHeight/domSize.height
+  const radius = event.radius*rate
+  const radian = event.radian
+
+  const dx = radius*Math.cos(radian)
+  const dy = radius*Math.sin(radian)
+  var x = windowWidth/2+dx
+  var y = windowHeight/2+dy
+  switch(event.type){
+    case 'mousedown': case 'mouseup':
+    // y += (height-windowHeight+22)
+    x += left
+    y += bottom
+    break
+    case 'mousemove':
+    x += left
+    y += bottom
+    break
+  }
+  if(event.type=='wheel'){
+    const deltaX = event.deltaX/10
+    const deltaY = event.deltaY/10
+    const point = electron.screen.getCursorScreenPoint()
+    const mouseMoveEvent1 = $.CGEventCreateMouseEvent(null,$.kCGEventMouseMoved,$.CGPointMake(x,y),null);
+    $.CGEventPost($.kCGHIDEventTap,mouseMoveEvent1);
+    const cgEventRef = $.CGEventCreateScrollWheelEvent(null, $.kCGScrollEventUnitLine, 5, deltaY, deltaX)
+    $.CGEventPost($.kCGHIDEventTap,cgEventRef);
+    const mouseMoveEvent = $.CGEventCreateMouseEvent(null,$.kCGEventMouseMoved,$.CGPointMake(point.x,point.y),null);
+    $.CGEventPost($.kCGHIDEventTap,mouseMoveEvent);
+    return
+  }
+  const type = NSEventType[event.type]
+  const nsEvent = $.NSEvent(
+      'mouseEventWithType', type,
+      'location', $.NSMakePoint(x,y),
       'modifierFlags', 0,
       'timestamp', $.NSProcessInfo('processInfo')('systemUptime'),
-      'windowNumber', $.NSNumber('numberWithInt', windowId)('unsignedLongLongValue'),
+      'windowNumber', $.NSNumber('numberWithInt', windowNumber)('unsignedLongLongValue'),
       'context', $.NSGraphicsContext('currentContext'),
       'eventNumber', 0,
       'clickCount', 1,
       'pressure', 0
     );
-  var event = event('CGEvent');
-  $.CGEventPostToPid(processId,event);
+  const cgEvent = nsEvent('CGEvent');
+  // $.CGEventPostToPid(processId,cgEvent);
+  $.CGEventPost($.kCGHIDEventTap,cgEvent);
+  // $.CFRelease(cgEvent);
 }
 
 function startApplication(){
